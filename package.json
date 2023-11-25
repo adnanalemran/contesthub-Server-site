@@ -1,11 +1,9 @@
 {
-  "name": "refactored-code",
+  "name": "b8a11-server-side-adnanalemran",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -17,7 +15,7 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
-    "mongodb": "^6.3.0",
-    "mongoose": "^8.0.1"
+    "mongodb": "^6.2.0",
+    "vercel": "^32.5.2"
   }
 }
