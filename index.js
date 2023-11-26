@@ -28,42 +28,48 @@ const client = new MongoClient(uri, {
   },
 });
 
-const verifyToken = (req, res, next) => {
-  const token = req?.cookies?.token;
-  if (!token) {
-    return res.status(401).send({ message: "unauthorized access" });
-  }
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(401).send({ message: "unauthorized access" });
-    }
-    req.user = decoded;
-    next();
-  });
-};
-
 async function run() {
   try {
     // await client.connect();
     const userCollection = client.db("contestHub").collection("user");
     const contestCollection = client.db("contestHub").collection("contest");
 
-    //aurh releted api
-    app.post("/jwt", (req, res) => {
+    // jwt related api
+    app.post("/jwt", async (req, res) => {
       const user = req.body;
-
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: "1h",
       });
-      res
-        .cookie("token", token, {
-          httpOnly: true,
-          secure: true, //replace deploy true
-
-          sameSite: "none",
-        })
-        .send({ success: true });
+      res.send({ token });
     });
+
+    // middlewares
+    const verifyToken = (req, res, next) => {
+      console.log("inside verify token", req.headers.authorization);
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: "unauthorized access" });
+      }
+      const token = req.headers.authorization.split(" ")[1];
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({ message: "unauthorized access" });
+        }
+        req.decoded = decoded;
+        next();
+      });
+    };
+
+    // use verify admin after verifyToken
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isAdmin = user?.role === "admin";
+      if (!isAdmin) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
 
     //User api
     app.post("/user", async (req, res) => {
@@ -77,7 +83,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/user", async (req, res) => {
+    app.get("/user", verifyToken, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
@@ -115,7 +121,7 @@ async function run() {
     });
 
     //contest api
-    app.post("/contest", async (req, res) => {
+    app.post("/contest", verifyToken, async (req, res) => {
       const product = req.body;
       try {
         const result = await contestCollection.insertOne(product);
@@ -141,6 +147,13 @@ async function run() {
       res.send(result);
     });
 
+    app.delete("/contest/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await contestCollection.deleteOne(query);
+      res.send(result);
+    });
+
     app.get("/contestCount", async (req, res) => {
       const count = await contestCollection.estimatedDocumentCount();
       res.send({ count });
@@ -160,7 +173,7 @@ async function run() {
       }
     });
 
-    app.get("/contest/:id", async (req, res) => {
+    app.get("/contest/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = {
         _id: new ObjectId(id),
@@ -169,7 +182,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/filtered-contest", verifyToken, async (req, res) => {
+    app.get("/filtered-contest", async (req, res) => {
       const { email } = req.query;
       try {
         const filteredcontests = await contestBuyCollection
@@ -182,7 +195,7 @@ async function run() {
       }
     });
 
-    app.get("/filtered-added-contest", verifyToken, async (req, res) => {
+    app.get("/filtered-added-contest", async (req, res) => {
       const { email } = req.query;
       try {
         const filteredContest = await contestCollection
