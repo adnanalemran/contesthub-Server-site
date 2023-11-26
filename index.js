@@ -47,7 +47,6 @@ async function run() {
     // await client.connect();
     const userCollection = client.db("contestHub").collection("user");
     const contestCollection = client.db("contestHub").collection("contest");
-   
 
     //aurh releted api
     app.post("/jwt", (req, res) => {
@@ -69,17 +68,14 @@ async function run() {
     //User api
     app.post("/user", async (req, res) => {
       const user = req.body;
-
-      try {
-        const result = await userCollection.insertOne(user);
-
-        res.status(201).json({ message: "User added successfully" });
-      } catch (error) {
-        console.error(error);
-        res
-          .status(500)
-          .json({ error: "Failed to insert data into the database" });
+      const query = { email: user.email };
+      const existingUser = await userCollection.findOne(query);
+      if (existingUser) {
+        return res.send({ message: "user already exists", insertedId: null });
       }
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+      
     });
 
     app.get("/user", async (req, res) => {
@@ -112,7 +108,6 @@ async function run() {
     });
 
     app.get("/contest", async (req, res) => {
-      
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
 
@@ -129,12 +124,12 @@ async function run() {
       res.send({ count });
     });
 
-    app.get("/contest/top6", async (req, res) => {
+    app.get("/contest/top10", async (req, res) => {
       try {
         const result = await contestCollection
           .find()
           .sort({ orderCount: -1 })
-          .limit(6)
+          .limit(10)
           .toArray();
         res.send(result);
       } catch (error) {
@@ -155,7 +150,9 @@ async function run() {
     app.get("/filtered-contest", verifyToken, async (req, res) => {
       const { email } = req.query;
       try {
-        const filteredcontests = await contestBuyCollection.find({ email }).toArray();
+        const filteredcontests = await contestBuyCollection
+          .find({ email })
+          .toArray();
         res.json(filteredcontests);
       } catch (error) {
         console.error(error);
@@ -166,15 +163,15 @@ async function run() {
     app.get("/filtered-added-contest", verifyToken, async (req, res) => {
       const { email } = req.query;
       try {
-        const filteredContest = await contestCollection.find({ email }).toArray();
+        const filteredContest = await contestCollection
+          .find({ email })
+          .toArray();
         res.json(filteredContest);
       } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Failed to fetch and filter data" });
       }
     });
-
-    
 
     app.delete("/contest/:id", async (req, res) => {
       const id = req.params.id;
@@ -242,7 +239,10 @@ async function run() {
       };
 
       try {
-        const result = await contestCollection.updateOne(filter, updatedProduct);
+        const result = await contestCollection.updateOne(
+          filter,
+          updatedProduct
+        );
         if (result.modifiedCount === 1) {
           res.json({ message: "Product updated successfully" });
         } else {
