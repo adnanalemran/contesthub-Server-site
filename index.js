@@ -75,20 +75,42 @@ async function run() {
       }
       const result = await userCollection.insertOne(user);
       res.send(result);
-      
     });
 
     app.get("/user", async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
+
     // Single user by uid
     app.get("/user/:uid", async (req, res) => {
       const uid = req.params.uid;
       const query = {
-        uid: uid, // Assuming "uid" is the field in your database
+        uid: uid,
       };
       const result = await userCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.delete("/user/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await userCollection.deleteOne(query);
+      res.send(result);
+    });
+    //change rale
+    app.patch("/user/:id", async (req, res) => {
+      const id = req.params.id;
+      const role = req.body.role;
+      console.log(id, role);
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          role: role,
+        },
+      };
+
+      const result = await userCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
 
