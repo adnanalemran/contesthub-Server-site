@@ -136,7 +136,7 @@ async function run() {
       res.send({ admin });
     });
 
-    app.get("/users/controller/:email",verifyToken,  async (req, res) => {
+    app.get("/users/controller/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
 
       if (email !== req.decoded.email) {
@@ -204,7 +204,7 @@ async function run() {
       }
     });
 
-    app.get("/contest/:id",  async (req, res) => {
+    app.get("/contest/:id", async (req, res) => {
       const id = req.params.id;
       const query = {
         _id: new ObjectId(id),
@@ -342,7 +342,6 @@ async function run() {
       }
     });
 
-
     // Search contest based on Type/Tag
 
     app.get("/contest/search/:text", async (req, res) => {
@@ -360,16 +359,19 @@ async function run() {
       }
     });
 
-
-
-
-
-
-
-
-
-
-
+    //contest status update
+ 
+    app.patch('/contest/status/:id', verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          status: 'Approve'
+        }
+      }
+      const result = await contestCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    })
 
 
 
