@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
 dotenv.config();
 
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -291,15 +292,15 @@ async function run() {
       const filter = { _id: new ObjectId(id) };
       const updatedProduct = {
         $set: {
-          name: data.name,
+          contestName: data.contestName,
           image: data.image,
-          Category: data.Category,
-          Quantity: data.Quantity,
-          chiefNames: data.chiefNames,
-          contestOrigin: data.contestOrigin,
-          price: data.price,
-          orderCount: data.orderCount,
-          contestOrigin: data.contestOrigin,
+          contestType: data.contestType,
+          prizeMoney: data.prizeMoney,
+          contestPrice: data.contestPrice,
+          email: data.email,
+          taskSubmissionInstruction: data.taskSubmissionInstruction,
+          contestDeadline: data.contestDeadline,
+
           shortDescription: data.shortDescription,
         },
       };
@@ -342,6 +343,37 @@ async function run() {
       }
     });
 
+    
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+    
+ 
+      const numericPrice = parseFloat(price);
+    
+ 
+      if (isNaN(numericPrice) || numericPrice <= 0) {
+        return res.status(400).send({ error: 'Invalid price' });
+      }
+    
+      const amount = Math.round(numericPrice * 100);  
+    
+      try {
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amount,
+          currency: "usd",
+          payment_method_types: ["card"],
+        });
+     
+        res.send({
+          clientSecret: paymentIntent.client_secret,
+        });
+      } catch (error) {
+        console.error("Error creating PaymentIntent:", error);
+        res.status(500).send({ error: 'Internal Server Error' });
+      }
+    });
+    
+
     // Search contest based on Type/Tag
 
     app.get("/contest/search/:text", async (req, res) => {
@@ -360,20 +392,18 @@ async function run() {
     });
 
     //contest status update
- 
-    app.patch('/contest/status/:id', verifyToken, async (req, res) => {
+
+    app.patch("/contest/status/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
         $set: {
-          status: 'Approve'
-        }
-      }
+          status: "Approve",
+        },
+      };
       const result = await contestCollection.updateOne(filter, updatedDoc);
       res.send(result);
-    })
-
-
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
