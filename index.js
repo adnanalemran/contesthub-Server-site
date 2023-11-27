@@ -120,7 +120,38 @@ async function run() {
       res.send(result);
     });
 
-    //contest api
+    app.get("/users/admin/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.role === "admin";
+      }
+      res.send({ admin });
+    });
+
+    app.get("/users/controller/:email",verifyToken,  async (req, res) => {
+      const email = req.params.email;
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let controller = false;
+      if (user) {
+        controller = user?.role === "controller";
+      }
+      res.send({ controller });
+    });
+
     app.post("/contest", verifyToken, async (req, res) => {
       const product = req.body;
       try {
@@ -173,7 +204,7 @@ async function run() {
       }
     });
 
-    app.get("/contest/:id", verifyToken, async (req, res) => {
+    app.get("/contest/:id",  async (req, res) => {
       const id = req.params.id;
       const query = {
         _id: new ObjectId(id),
@@ -311,13 +342,16 @@ async function run() {
       }
     });
 
+
+    // Search contest based on Type/Tag
+
     app.get("/contest/search/:text", async (req, res) => {
       const text = req.params.text;
       console.log(text);
 
       try {
         const searchResults = await contestCollection
-          .find({ name: { $regex: text, $options: "i" } })
+          .find({ contestType: { $regex: text, $options: "i" } })
           .toArray();
         res.json(searchResults);
       } catch (error) {
@@ -325,6 +359,19 @@ async function run() {
         res.status(500).json({ error: "Internal server error" });
       }
     });
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     await client.db("admin").command({ ping: 1 });
     console.log(
