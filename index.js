@@ -34,6 +34,7 @@ async function run() {
     // await client.connect();
     const userCollection = client.db("contestHub").collection("user");
     const contestCollection = client.db("contestHub").collection("contest");
+    const paymentCollection = client.db("contestHub").collection("payment");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -251,38 +252,6 @@ async function run() {
       res.send(result);
     });
 
-    // buy api
-    app.post("/buy", async (req, res) => {
-      const product = req.body;
-
-      try {
-        const result = await contestBuyCollection.insertOne(product);
-
-        res.status(201).json({ message: "Product added successfully" });
-      } catch (error) {
-        console.error(error);
-        res
-          .status(500)
-          .json({ error: "Failed to insert data into the database" });
-      }
-    });
-
-    app.get("/buy", async (req, res) => {
-      const result = await contestBuyCollection.find().toArray();
-      res.send(result);
-    });
-
-    app.delete("/buy/:id", async (req, res) => {
-      const id = req.params.id;
-
-      const query = {
-        _id: new ObjectId(id),
-      };
-      const result = await contestBuyCollection.deleteOne(query);
-
-      res.send(result);
-    });
-
     app.put("/contest/update/:id", async (req, res) => {
       const id = req.params.id;
       const data = req.body;
@@ -343,36 +312,32 @@ async function run() {
       }
     });
 
-    
     app.post("/create-payment-intent", async (req, res) => {
       const { price } = req.body;
-    
- 
+
       const numericPrice = parseFloat(price);
-    
- 
+
       if (isNaN(numericPrice) || numericPrice <= 0) {
-        return res.status(400).send({ error: 'Invalid price' });
+        return res.status(400).send({ error: "Invalid price" });
       }
-    
-      const amount = Math.round(numericPrice * 100);  
-    
+
+      const amount = Math.round(numericPrice * 100);
+
       try {
         const paymentIntent = await stripe.paymentIntents.create({
           amount: amount,
           currency: "usd",
           payment_method_types: ["card"],
         });
-     
+
         res.send({
           clientSecret: paymentIntent.client_secret,
         });
       } catch (error) {
         console.error("Error creating PaymentIntent:", error);
-        res.status(500).send({ error: 'Internal Server Error' });
+        res.status(500).send({ error: "Internal Server Error" });
       }
     });
-    
 
     // Search contest based on Type/Tag
 
@@ -404,6 +369,23 @@ async function run() {
       const result = await contestCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
+    //payment api
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const paymentResult = await paymentCollection.insertOne(payment);
+    });
+
+    app.get("/payments/:email", verifyToken, async (req, res) => {
+      try {
+        const query = { email: req.params.email };
+        const result = await paymentCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error("Error fetching payments:", error);
+        res.status(500).send("Internal Server Error");
+      }
+    });
+    
 
     await client.db("admin").command({ ping: 1 });
     console.log(
