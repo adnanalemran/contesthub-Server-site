@@ -434,23 +434,25 @@ app.patch("/user/Count/:id", async (req, res) => {
     });
 
 
-
-
-
-    app.get("/contest/top3", async (req, res) => {
+    app.get("/contestTop5", async (req, res) => {
+      console.log('hit')
       try {
         const result = await contestCollection
           .find()
           .sort({ orderCount: -1 })
-          .limit(3)
+          .limit(5)
           .toArray();
         res.send(result);
       } catch (error) {
-        console.error(error);
+        console.error("Error fetching and sorting data:", error);
         res.status(500).json({ error: "Failed to fetch and sort data" });
       }
     });
 
+
+
+    
+    
 
 
     await client.db("admin").command({ ping: 1 });
