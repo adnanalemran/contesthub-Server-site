@@ -136,23 +136,23 @@ async function run() {
       res.send(result);
     });
 
-// Change createCount
-app.patch("/user/Count/:id", async (req, res) => {
-  const id = req.params.id;
-  const createCount = req.body.createCount;
-  const  newCreateCount = createCount+1;
-   // Assuming createCount is the correct field name
-  console.log(id, newCreateCount);
-  const filter = { _id: new ObjectId(id) };
-  const updatedDoc = {
-    $set: {
-      createCount: newCreateCount, // Adjusted the field name
-    },
-  };
+    // Change createCount
+    app.patch("/user/Count/:id", async (req, res) => {
+      const id = req.params.id;
+      const createCount = req.body.createCount;
+      const newCreateCount = createCount + 1;
+      // Assuming createCount is the correct field name
+      console.log(id, newCreateCount);
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          createCount: newCreateCount, // Adjusted the field name
+        },
+      };
 
-  const result = await userCollection.updateOne(filter, updatedDoc);
-  res.send(result);
-});
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
     app.get("/users/admin/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
 
@@ -400,6 +400,19 @@ app.patch("/user/Count/:id", async (req, res) => {
       const result = await contestCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
+
+    app.patch("/contest/winning/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          winner: "winner",
+        },
+      };
+      const result = await contestCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+
     //payment api
     app.post("/payments", async (req, res) => {
       const payment = req.body;
@@ -417,7 +430,18 @@ app.patch("/user/Count/:id", async (req, res) => {
       }
     });
 
-
+    app.get("/api/contests/approved", async (req, res) => {
+      try {
+        const approvedContests = await contestCollection.find({
+          status: "Approve",
+        }).toArray();  // Convert the cursor to an array
+        res.json(approvedContests);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send("Internal Server Error");
+      }
+    });
+    
 
     app.get("/creator/top3", async (req, res) => {
       try {
@@ -433,9 +457,8 @@ app.patch("/user/Count/:id", async (req, res) => {
       }
     });
 
-
     app.get("/contestTop6", async (req, res) => {
-      console.log('hit')
+      console.log("hit");
       try {
         const result = await contestCollection
           .find()
@@ -448,12 +471,6 @@ app.patch("/user/Count/:id", async (req, res) => {
         res.status(500).json({ error: "Failed to fetch and sort data" });
       }
     });
-
-
-
-    
-    
-
 
     await client.db("admin").command({ ping: 1 });
     console.log(
