@@ -121,6 +121,20 @@ async function run() {
       const result = await userCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
+    app.patch("/contest/:id", async (req, res) => {
+      const id = req.params.id;
+      const orderCount = req.body.orderCount;
+      console.log(id, orderCount);
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          orderCount: orderCount,
+        },
+      };
+
+      const result = await contestCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
 
 // Change createCount
 app.patch("/user/Count/:id", async (req, res) => {
@@ -410,6 +424,24 @@ app.patch("/user/Count/:id", async (req, res) => {
         const result = await userCollection
           .find()
           .sort({ createCount: -1 })
+          .limit(3)
+          .toArray();
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to fetch and sort data" });
+      }
+    });
+
+
+
+
+
+    app.get("/contest/top3", async (req, res) => {
+      try {
+        const result = await contestCollection
+          .find()
+          .sort({ orderCount: -1 })
           .limit(3)
           .toArray();
         res.send(result);
