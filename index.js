@@ -85,7 +85,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/user", verifyToken, async (req, res) => {
+    app.get("/user", async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
@@ -122,6 +122,23 @@ async function run() {
       res.send(result);
     });
 
+// Change createCount
+app.patch("/user/Count/:id", async (req, res) => {
+  const id = req.params.id;
+  const createCount = req.body.createCount;
+  const  newCreateCount = createCount+1;
+   // Assuming createCount is the correct field name
+  console.log(id, newCreateCount);
+  const filter = { _id: new ObjectId(id) };
+  const updatedDoc = {
+    $set: {
+      createCount: newCreateCount, // Adjusted the field name
+    },
+  };
+
+  const result = await userCollection.updateOne(filter, updatedDoc);
+  res.send(result);
+});
     app.get("/users/admin/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
 
@@ -385,7 +402,24 @@ async function run() {
         res.status(500).send("Internal Server Error");
       }
     });
-    
+
+
+
+    app.get("/creator/top3", async (req, res) => {
+      try {
+        const result = await userCollection
+          .find()
+          .sort({ createCount: -1 })
+          .limit(3)
+          .toArray();
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to fetch and sort data" });
+      }
+    });
+
+
 
     await client.db("admin").command({ ping: 1 });
     console.log(
