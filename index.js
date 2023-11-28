@@ -434,13 +434,13 @@ app.patch("/user/Count/:id", async (req, res) => {
     });
 
 
-    app.get("/contestTop5", async (req, res) => {
+    app.get("/contestTop6", async (req, res) => {
       console.log('hit')
       try {
         const result = await contestCollection
           .find()
           .sort({ orderCount: -1 })
-          .limit(5)
+          .limit(6)
           .toArray();
         res.send(result);
       } catch (error) {
