@@ -13,7 +13,7 @@ const port = process.env.PORT || 5000;
 // middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173"], //if deploy replace
+    origin: ["http://localhost:5173", "https://contesthub-adnan.web.app"], //if deploy replace
     credentials: true,
   })
 );
@@ -211,7 +211,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/contest/:id", async (req, res) => {
+    app.delete("/contest/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await contestCollection.deleteOne(query);
@@ -259,7 +259,7 @@ async function run() {
       }
     });
 
-    app.get("/filtered-added-contest", async (req, res) => {
+    app.get("/filtered-added-contest", verifyToken, async (req, res) => {
       const { email } = req.query;
       try {
         const filteredContest = await contestCollection
@@ -272,7 +272,7 @@ async function run() {
       }
     });
 
-    app.delete("/contest/:id", async (req, res) => {
+    app.delete("/contest/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
 
       const query = {
@@ -292,36 +292,19 @@ async function run() {
       const filter = { _id: new ObjectId(id) };
       const updatedProduct = {
         $set: {
-          contestName: data.contestName,
-          image: data.image,
-          contestType: data.contestType,
-          prizeMoney: data.prizeMoney,
-          contestPrice: data.contestPrice,
-          email: data.email,
-          taskSubmissionInstruction: data.taskSubmissionInstruction,
-          contestDeadline: data.contestDeadline,
-
-          shortDescription: data.shortDescription,
+          ...data,
         },
       };
 
-      try {
-        const result = await contestCollection.updateOne(
-          filter,
-          updatedProduct
-        );
-        if (result.modifiedCount === 1) {
-          res.json({ message: "Product updated successfully" });
-        } else {
-          res.status(404).json({ error: "Product not found" });
-        }
-      } catch (error) {
-        console.error("Error updating product:", error);
-        res.status(500).json({ error: "Internal server error" });
+      const result = await contestCollection.updateOne(filter, updatedProduct);
+      if (result.modifiedCount === 1) {
+        res.json({ message: "Product updated successfully" });
+      } else {
+        res.status(404).json({ error: "Product not found" });
       }
     });
 
-    app.put("/user/update/:uid", async (req, res) => {
+    app.put("/user/update/:uid", verifyToken, async (req, res) => {
       const uid = req.params.uid;
       const userData = req.body;
 
@@ -343,7 +326,7 @@ async function run() {
       }
     });
 
-    app.post("/create-payment-intent", async (req, res) => {
+    app.post("/create-payment-intent", verifyToken, async (req, res) => {
       const { price } = req.body;
 
       const numericPrice = parseFloat(price);
@@ -379,6 +362,7 @@ async function run() {
       try {
         const searchResults = await contestCollection
           .find({ contestType: { $regex: text, $options: "i" } })
+         
           .toArray();
         res.json(searchResults);
       } catch (error) {
@@ -389,7 +373,7 @@ async function run() {
 
     //contest status update
 
-    app.patch("/contest/status/:id", verifyToken, async (req, res) => {
+    app.patch("/contest/status/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
@@ -401,7 +385,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/contest/winning/:id", verifyToken, async (req, res) => {
+    app.patch("/contest/winning/:id",  async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
@@ -414,7 +398,7 @@ async function run() {
     });
 
     //payment api
-    app.post("/payments", async (req, res) => {
+    app.post("/payments", verifyToken, async (req, res) => {
       const payment = req.body;
       const paymentResult = await paymentCollection.insertOne(payment);
     });
@@ -431,17 +415,22 @@ async function run() {
     });
 
     app.get("/api/contests/approved", async (req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
       try {
-        const approvedContests = await contestCollection.find({
-          status: "Approve",
-        }).toArray();  // Convert the cursor to an array
+        const approvedContests = await contestCollection
+          .find({
+            status: "Approve",
+          })
+          .skip(page * size)
+          .limit(size)
+          .toArray(); // Convert the cursor to an array
         res.json(approvedContests);
       } catch (error) {
         console.error(error);
         res.status(500).send("Internal Server Error");
       }
     });
-    
 
     app.get("/creator/top3", async (req, res) => {
       try {
@@ -472,7 +461,7 @@ async function run() {
       }
     });
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
